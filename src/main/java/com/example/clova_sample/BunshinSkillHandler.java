@@ -55,11 +55,14 @@ public class BunshinSkillHandler {
         Call call = client.newCall(request);
         try {
             Response response = call.execute();
+            log.info("0000001" + response);
             ResponseBody body = response.body();
+            log.info("0000002" + body);
             result = body.string();
+            log.info("0000003" + result);
             // get from response
             ResponseDTO resdto = new ObjectMapper().readValue(result, ResponseDTO.class);
-            log.info(resdto.toString());
+            log.info("0000004" + resdto.toString());
         }catch(IOException e){
             e.getMessage();
         }

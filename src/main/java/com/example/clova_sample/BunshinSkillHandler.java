@@ -43,36 +43,22 @@ public class BunshinSkillHandler {
     private static final String ERROR_MESSAGE = "すみません、よく聞き取れないでござる";
 
     @LaunchMapping
-    CEKResponse handleLaunch(SessionHolder sessionHolder) throws IOException {
+    CEKResponse handleLaunch(SessionHolder sessionHolder) {
 
-        // user request
-        String url = "https://script.google.com/macros/s/AKfycbwS1yJ-1fjjW-aH9UlIQXIqIwVLuOnFK2spBVlAojryJ9rz3Uvt/exec&lineUserId=" + sessionHolder.getSession().getUser().getUserId();
-        OkHttpClient client = new OkHttpClient();
-        String result = "";
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Call call = client.newCall(request);
-        try {
-            Response response = call.execute();
-            log.info("0000001" + response);
-            ResponseBody body = response.body();
-            log.info("0000002" + body);
-            result = body.string();
-            log.info("0000003" + result);
-            // get from response
-            ResponseDTO resdto = new ObjectMapper().readValue(result, ResponseDTO.class);
-            log.info("0000004" + resdto.toString());
-        }catch(IOException e){
-            e.getMessage();
-        }
+        /* 待機時間テスト
+        * 結果：
+        5s: x
+        3s: x
+        2.5s: x
+        2s: 成功　9/10
+        1.5s : 成功　9/10
+        1s: o
+        */
+//        this.sleep(1500);
+
+        this.getUserInfo(sessionHolder);
+
         User currentUser = new User();
-//        // get from response
-//        User currentUser = new ObjectMapper().readValue(result, User.class);
-//        // set user to session
-//        sessionHolder.getSessionAttributes().put(USER, currentUser);
-//        // set mode to session
-//        sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
 
         return CEKResponse.builder()
                 .outputSpeech(text(currentUser.getName() + "殿、お待ちしておりました。唱えたい術を伝えて欲しいござる。"))
@@ -93,6 +79,7 @@ public class BunshinSkillHandler {
         // invoke callbackMode
         String outputSpeechText = callbackMode(currentMode, sessionHolder);
 
+
         return CEKResponse.builder()
                 .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(false)
@@ -103,26 +90,19 @@ public class BunshinSkillHandler {
     CEKResponse handleFripPageIntent(SessionHolder sessionHolder,
                                      @SlotValue Optional<String> order) {
 
-        // get mode from session
-        String mode = (String) sessionHolder.getSessionAttributes().get(MODE);
-        // get status from session
-        String status = (String) sessionHolder.getSessionAttributes().get(STATUS);
-        String outputSpeechText = "";
-        if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_INPROGRESS)) {
-            String currentOrder = order.orElse(ORDER_DEFAULT);
-            if (currentOrder.equals("次")) {
-                outputSpeechText = "フリップページ作成中。次です。";
-            } else if (currentOrder.equals("前")) {
-                outputSpeechText = "フリップページ作成中。前です。";
-            } else {
-                outputSpeechText = ERROR_MESSAGE;
-            }
-        } else {
-            outputSpeechText = ERROR_MESSAGE;
-        }
+
+        /* 待機時間テスト
+        * 結果：
+        5s: x
+        3s: x
+        2s: 成功 10/10
+        1.5s :
+        1s:
+        */
+        this.sleep(2000);
 
         return CEKResponse.builder()
-                .outputSpeech(text(outputSpeechText))
+                .outputSpeech(text("処理成功"))
                 .shouldEndSession(false)
                 .build();
     }
@@ -130,50 +110,15 @@ public class BunshinSkillHandler {
     @IntentMapping("Clova.YesIntent")
     CEKResponse handleYesIntent(SessionHolder sessionHolder) throws IOException {
 
-        String mode = (String) sessionHolder.getSessionAttributes().get(MODE);
-        String status = (String) sessionHolder.getSessionAttributes().get(STATUS);
-        List<Talk> talkList = new ArrayList<>();
-        List<String> outputSpeechTexts = new ArrayList<>();
-        if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_START)) {
-
-            User currentUser = (User) sessionHolder.getSessionAttributes().get(USER);
-            //
-            // SectionRequestとセリフ格納処理
-            //
-//                //Section取得リクエスト
-//                String url = "https://api.line.me/v2/profile";
-//                OkHttpClient client = new OkHttpClient();
-//                Request request = new Request.Builder()
-//                        .url(url)
-//                        .build();
-//                Call call = client.newCall(request);
-//                try {
-//                    Response response = call.execute();
-//                    ResponseBody body = response.body();
-//                    String result = body.string();
-//                    log.info(result);
-//                } catch (IOException e) {
-//                    e.getMessage();
-//                }
-
-            String response = "{\"name\" : \"いわせ あつや\", \"id\" : \"id\", \"sequence\" : 1, \"records\" : [ { \"name\" : \"ああああ\" }, { \"name\" : \"いいいい\" }]}";
-
-            // get Section from response
-            Section currentSection = new ObjectMapper().readValue(response, Section.class);
-            // set message to outputSpeechTexts
-            for(Talk t : talkList){
-                outputSpeechTexts.add(t.getText());
-            }
-            // set mode to session
-            sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
-
-
-            // set status to session
-            sessionHolder.getSessionAttributes().put(STATUS, STATUS_INPROGRESS);
-
-        } else {
-            outputSpeechTexts.add(ERROR_MESSAGE);
-        }
+        /* 待機時間テスト
+        * 結果：
+        5s: x
+        3s: x
+        2s: 成功　10/10
+        1.5s :
+        1s:
+        */
+        this.sleep(2000);
 
         return CEKResponse.builder()
                 .outputSpeech(text(String.join("。", ERROR_MESSAGE))) // 複数行のテキストを連結して発話
@@ -251,4 +196,73 @@ public class BunshinSkillHandler {
         }
     }
 
+
+    private void getUserInfo(SessionHolder sessionHolder){
+        long start = System.currentTimeMillis();
+
+//        // user request
+//        String url = "https://script.google.com/macros/s/AKfycbwS1yJ-1fjjW-aH9UlIQXIqIwVLuOnFK2spBVlAojryJ9rz3Uvt/exec?lineUserId="+ Math.random();
+//
+//        log.info("XXX DEBUG XXX : " + url);
+//
+//        OkHttpClient client = new OkHttpClient();
+//        String result = "";
+//        Request request = new Request.Builder()
+//                .url(url)
+//                .build();
+//        Call call = client.newCall(request);
+//        try {
+//            Response response = call.execute();
+//            ResponseBody body = response.body();
+//            result = body.string();
+//
+//            log.info("-------- result = " + result);
+//
+//
+//            // get from response
+////            ResponseDTO resdto = new ObjectMapper().readValue(result, ResponseDTO.class);
+////            log.info("0000004" + resdto.toString());
+//        }catch(Exception e){
+//            e.getMessage();
+//        }
+
+        // original
+        // user request
+        String url = "https://script.google.com/macros/s/AKfycbwS1yJ-1fjjW-aH9UlIQXIqIwVLuOnFK2spBVlAojryJ9rz3Uvt/exec?lineUserId=" + sessionHolder.getSession().getUser().getUserId();
+        OkHttpClient client = new OkHttpClient();
+        String result = "";
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        Call call = client.newCall(request);
+        try {
+            Response response = call.execute();
+            log.info("0000001" + response);
+            ResponseBody body = response.body();
+            log.info("0000002" + body);
+            result = body.string();
+            log.info("0000003" + result);
+            // get from response
+            ResponseDTO resdto = new ObjectMapper().readValue(result, ResponseDTO.class);
+            log.info("0000004" + resdto.toString());
+        }catch(IOException e){
+            e.getMessage();
+        }
+
+        long end = System.currentTimeMillis();
+        log.info("XXX DEBUG XXX : 処理時間　＝　" + (end - start)  + "ms");
+    }
+
+    private void sleep(int millis){
+
+        try {
+
+            long start = System.currentTimeMillis();
+            Thread.sleep(millis);
+            long end = System.currentTimeMillis();
+            log.info("XXX DEBUG XXX : 処理時間　＝　" + (end - start)  + "ms");
+
+        }catch(Exception e){
+        }
+    }
 }

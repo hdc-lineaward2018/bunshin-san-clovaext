@@ -3,7 +3,7 @@ package com.example.clova_sample.dto;
 public class User {
     String Name;
     String lineUserID;
-    Integer currentSectionSequence = 1;
+    Integer currentSectionSequence = 0;
 
     public String getName() {
         return Name;

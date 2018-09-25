@@ -5,9 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.clova.extension.boot.handler.annnotation.*;
 import com.linecorp.clova.extension.boot.message.response.CEKResponse;
 import com.linecorp.clova.extension.boot.session.SessionHolder;
+import jdk.nashorn.internal.parser.JSONParser;
 import okhttp3.*;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.json.JsonParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +38,7 @@ public class BunshinSkillHandler {
     private static final String ORDER_DEFAULT = "defaultOrder";
 
     // Status
+    private static final String STATUS_DEFAULT = "default";
     private static final String STATUS_START = "start";
     private static final String STATUS_INPROGRESS = "inProgress";
     private static final String STATUS_END = "end";
@@ -45,37 +49,20 @@ public class BunshinSkillHandler {
     @LaunchMapping
     CEKResponse handleLaunch(SessionHolder sessionHolder) throws IOException {
 
-        // user request
-        String url = "https://script.google.com/macros/s/AKfycbwS1yJ-1fjjW-aH9UlIQXIqIwVLuOnFK2spBVlAojryJ9rz3Uvt/exec&lineUserId=" + sessionHolder.getSession().getUser().getUserId();
-        OkHttpClient client = new OkHttpClient();
-        String result = "";
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Call call = client.newCall(request);
-        try {
-            Response response = call.execute();
-            log.info("0000001" + response);
-            ResponseBody body = response.body();
-            log.info("0000002" + body);
-            result = body.string();
-            log.info("0000003" + result);
-            // get from response
-            ResponseDTO resdto = new ObjectMapper().readValue(result, ResponseDTO.class);
-            log.info("0000004" + resdto.toString());
-        }catch(IOException e){
-            e.getMessage();
-        }
-        User currentUser = new User();
-//        // get from response
-//        User currentUser = new ObjectMapper().readValue(result, User.class);
-//        // set user to session
-//        sessionHolder.getSessionAttributes().put(USER, currentUser);
-//        // set mode to session
-//        sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
+        String response = "{\"name\" : \"いわせ あつや\", \"lineUserID\" : \"id\", \"currentSectionSequence\" : 0}";
+        // get from response
+        User currentUser = new ObjectMapper().readValue(response, User.class);
+        // set user to session
+        sessionHolder.getSessionAttributes().put(USER, currentUser);
+        // set mode to session
+        sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
+        // set status to session
+        sessionHolder.getSessionAttributes().put(STATUS, STATUS_DEFAULT);
+
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
-                .outputSpeech(text(currentUser.getName() + "殿、お待ちしておりました。唱えたい術を伝えて欲しいござる。"))
+                .outputSpeech(text(currentUser.getName() + "殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。"))
                 .shouldEndSession(false)
                 .build();
     }
@@ -84,14 +71,13 @@ public class BunshinSkillHandler {
     CEKResponse handleInvokeModeIntent(SessionHolder sessionHolder,
                                        @SlotValue Optional<String> mode) throws IOException {
 
-        log.info("mode:" + mode.orElse(MODE_DEFAULT));
-        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
-
         String currentMode = mode.orElse(MODE_DEFAULT);
         // set mode to session
         sessionHolder.getSessionAttributes().put(MODE, currentMode);
         // invoke callbackMode
         String outputSpeechText = callbackMode(currentMode, sessionHolder);
+
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
                 .outputSpeech(text(outputSpeechText))
@@ -101,7 +87,7 @@ public class BunshinSkillHandler {
 
     @IntentMapping("FripPage")
     CEKResponse handleFripPageIntent(SessionHolder sessionHolder,
-                                     @SlotValue Optional<String> order) {
+                                     @SlotValue Optional<String> order) throws IOException {
 
         // get mode from session
         String mode = (String) sessionHolder.getSessionAttributes().get(MODE);
@@ -109,17 +95,15 @@ public class BunshinSkillHandler {
         String status = (String) sessionHolder.getSessionAttributes().get(STATUS);
         String outputSpeechText = "";
         if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_INPROGRESS)) {
+
             String currentOrder = order.orElse(ORDER_DEFAULT);
-            if (currentOrder.equals("次")) {
-                outputSpeechText = "フリップページ作成中。次です。";
-            } else if (currentOrder.equals("前")) {
-                outputSpeechText = "フリップページ作成中。前です。";
-            } else {
-                outputSpeechText = ERROR_MESSAGE;
-            }
+            flipPage(sessionHolder, currentOrder);
+
         } else {
             outputSpeechText = ERROR_MESSAGE;
         }
+
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
                 .outputSpeech(text(outputSpeechText))
@@ -130,53 +114,25 @@ public class BunshinSkillHandler {
     @IntentMapping("Clova.YesIntent")
     CEKResponse handleYesIntent(SessionHolder sessionHolder) throws IOException {
 
+        // get mode from session
         String mode = (String) sessionHolder.getSessionAttributes().get(MODE);
+        // get status from session
         String status = (String) sessionHolder.getSessionAttributes().get(STATUS);
-        List<Talk> talkList = new ArrayList<>();
-        List<String> outputSpeechTexts = new ArrayList<>();
+        String outputSpeechText = "";
         if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_START)) {
-
-            User currentUser = (User) sessionHolder.getSessionAttributes().get(USER);
-            //
-            // SectionRequestとセリフ格納処理
-            //
-//                //Section取得リクエスト
-//                String url = "https://api.line.me/v2/profile";
-//                OkHttpClient client = new OkHttpClient();
-//                Request request = new Request.Builder()
-//                        .url(url)
-//                        .build();
-//                Call call = client.newCall(request);
-//                try {
-//                    Response response = call.execute();
-//                    ResponseBody body = response.body();
-//                    String result = body.string();
-//                    log.info(result);
-//                } catch (IOException e) {
-//                    e.getMessage();
-//                }
-
-            String response = "{\"name\" : \"いわせ あつや\", \"id\" : \"id\", \"sequence\" : 1, \"records\" : [ { \"name\" : \"ああああ\" }, { \"name\" : \"いいいい\" }]}";
-
-            // get Section from response
-            Section currentSection = new ObjectMapper().readValue(response, Section.class);
-            // set message to outputSpeechTexts
-            for(Talk t : talkList){
-                outputSpeechTexts.add(t.getText());
-            }
-            // set mode to session
-            sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
-
 
             // set status to session
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_INPROGRESS);
+            outputSpeechText = callbackText(sessionHolder);
 
         } else {
-            outputSpeechTexts.add(ERROR_MESSAGE);
+            outputSpeechText = ERROR_MESSAGE;
         }
 
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
+
         return CEKResponse.builder()
-                .outputSpeech(text(String.join("。", ERROR_MESSAGE))) // 複数行のテキストを連結して発話
+                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(false)
                 .build();
     }
@@ -184,8 +140,26 @@ public class BunshinSkillHandler {
     @IntentMapping("Clova.NoIntent")
     CEKResponse handleNoIntent(SessionHolder sessionHolder) {
 
+        // get mode from session
+        String mode = (String) sessionHolder.getSessionAttributes().get(MODE);
+        // get status from session
+        String status = (String) sessionHolder.getSessionAttributes().get(STATUS);
+        String outputSpeechText = "";
+        if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_START)) {
+            // set status to session
+            sessionHolder.getSessionAttributes().put(STATUS, STATUS_DEFAULT);
+            // set mode to session
+            sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
+            outputSpeechText = "中止でござるか。他に唱えたい術を伝えて欲しいでござる。";
+
+        } else {
+            outputSpeechText = ERROR_MESSAGE;
+        }
+
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
+
         return CEKResponse.builder()
-                .outputSpeech(text(String.join("。", ERROR_MESSAGE))) // 複数行のテキストを連結して発話
+                .outputSpeech(text(outputSpeechText)) // 複数行のテキストを連結して発話
                 .shouldEndSession(false)
                 .build();
     }
@@ -193,28 +167,43 @@ public class BunshinSkillHandler {
     @IntentMapping("Clova.GuideIntent")
     CEKResponse handleGuideIntent(SessionHolder sessionHolder) {
 
+        String outputSpeechText = "術を唱えることで、色々できるでござる。";
+
+        log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
+
         return CEKResponse.builder()
-                .outputSpeech(text(String.join("。", ERROR_MESSAGE))) // 複数行のテキストを連結して発話
+                .outputSpeech(text(outputSpeechText)) // 複数行のテキストを連結して発話
                 .shouldEndSession(false)
                 .build();
     }
 
     @IntentMapping("Clova.CancelIntent")
     CEKResponse handleCancelIntent() {
+
+        String outputSpeechText = "さらばでござる。";
+
         return CEKResponse.builder()
-                .outputSpeech(text("さらばでござる。"))
+                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(true)
                 .build();
     }
 
     @SessionEndedMapping
-    CEKResponse handleSessionEnded() {
-        log.info("サンプルスキルを終了しました．");
+    CEKResponse handleSessionEnded(SessionHolder sessionHolder) {
+        log.info("分身さんを終了しました．");
+        sessionHolder.getSessionAttributes().clear();
         return CEKResponse.empty();
     }
 
 // ------------- private ----------------
 
+    /**
+     * モードによって読み上げテキストを返す
+     * @param mode
+     * @param sessionHolder
+     * @return
+     * @throws IOException
+     */
     private String callbackMode(String mode, SessionHolder sessionHolder) throws IOException {
         switch (mode) {
             case "分身":
@@ -235,14 +224,15 @@ public class BunshinSkillHandler {
 //                    e.getMessage();
 //                }
 
-                String response = "{\"name\" : \"いわせ あつや\", \"id\" : \"id\"}";
-
+                String response = "{\"name\" : \"いわせの書\", \"id\" : \"id\"}";
                 // get book from response
                 Book currentBook = new ObjectMapper().readValue(response, Book.class);
                 // set book to session
                 sessionHolder.getSessionAttributes().put(BOOK, currentBook);
                 // get user from session
-                User currentUser = (User) sessionHolder.getSessionAttributes().get(USER);
+                Object obj = sessionHolder.getSessionAttributes().get(USER);
+                User currentUser = (User)obj;
+
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
                 return "私は" + currentUser.getName() + "でござる。" + currentBook.getName() + "の巻物を読み上げても良いでござるか？";
@@ -251,4 +241,93 @@ public class BunshinSkillHandler {
         }
     }
 
+    /**
+     * ブック内の読み上げテキストを返す
+     * @param sessionHolder
+     * @return
+     * @throws IOException
+     */
+    private String callbackText(SessionHolder sessionHolder) throws IOException {
+
+        User currentUser = (User) sessionHolder.getSessionAttributes().get(USER);
+        Book currentBook = (Book) sessionHolder.getSessionAttributes().get(BOOK);
+        String result = "";
+        if(currentBook.getTalkList().size() == currentUser.getCurrentSectionSequence() + 1){
+            Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
+            result =  currentTalk.getText();
+            // set status to session
+            sessionHolder.getSessionAttributes().put(STATUS, STATUS_DEFAULT);
+            // set mode to session
+            sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
+            result += "巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
+
+        }else if (currentBook.getTalkList().size() > currentUser.getCurrentSectionSequence() && currentUser.getCurrentSectionSequence() >= 0){
+            Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
+            result = currentTalk.getText();
+        }else{
+            result = ERROR_MESSAGE;
+        }
+
+        return result;
+    }
+
+    /**
+     * ページめくり処理
+     * @param sessionHolder
+     * @param currentOrder
+     * @return
+     */
+    private String flipPage(SessionHolder sessionHolder, String currentOrder) throws IOException {
+
+        String result = "";
+        User currentUser = (User) sessionHolder.getSessionAttributes().get(USER);
+        Integer currentPage = currentUser.getCurrentSectionSequence();
+
+        if (currentOrder.equals("次")) {
+            currentPage++;
+            result = callbackText(sessionHolder);
+        } else if (currentOrder.equals("前")) {
+            currentPage--;
+            result = callbackText(sessionHolder);
+        } else {
+            result = ERROR_MESSAGE;
+        }
+        return result;
+    }
+
+    /**
+     * 外部API叩き用サンプル Clovaでは現状使用不可
+     * @param sessionHolder
+     * @return
+     * @throws IOException
+     */
+    private String callAPISample(SessionHolder sessionHolder) throws IOException {
+        // user request
+        String url = "https://script.google.com/macros/s/AKfycbwS1yJ-1fjjW-aH9UlIQXIqIwVLuOnFK2spBVlAojryJ9rz3Uvt/exec?lineUserId=" + sessionHolder.getSession().getUser().getUserId();
+        OkHttpClient client = new OkHttpClient();
+        String result = "";
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        Call call = client.newCall(request);
+        try {
+            Response response = call.execute();
+            log.info("0000001" + response);
+            ResponseBody body = response.body();
+            log.info("0000002" + body);
+            result = body.string();
+            log.info("0000003" + result);
+            // get from response
+            JSONObject resdto = new JSONObject(result);
+            log.info("0000004" + resdto);
+            Boolean boo = resdto.getBoolean("success");
+            JSONObject bar = resdto.getJSONObject("result");
+            log.info("0000005" + bar.getString("name"));
+            result = bar.getString("name");
+
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+        return result;
+    }
 }

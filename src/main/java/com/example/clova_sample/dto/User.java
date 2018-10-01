@@ -1,24 +1,27 @@
 package com.example.clova_sample.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
-    String Name;
-    String lineUserID;
+    String name;
+    String lineuserid;
     Integer currentSectionSequence = 0;
 
     public String getName() {
-        return Name;
+        return name;
     }
 
     public void setName(String name) {
-        Name = name;
+        this.name = name;
     }
 
-    public String getLineUserID() {
-        return lineUserID;
+    public String getlineuserid() {
+        return lineuserid;
     }
 
-    public void setLineUserID(String lineUserID) {
-        this.lineUserID = lineUserID;
+    public void setlineuserid(String lineUserID) {
+        this.lineuserid = lineUserID;
     }
 
     public Integer getCurrentSectionSequence() {

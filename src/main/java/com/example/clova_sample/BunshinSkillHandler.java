@@ -44,22 +44,27 @@ public class BunshinSkillHandler {
     private static final String STATUS_START = "start";
     private static final String STATUS_INPROGRESS = "inProgress";
 
+    // Variable for API
+    private User currentUser = new User();
+    private Book currentBook = new Book();
+
     // Error Message
     private static final String ERROR_MESSAGE = "すみません、よく聞き取れないでござる";
 
     @LaunchMapping
     CEKResponse handleLaunch(SessionHolder sessionHolder) throws IOException {
 
-        User currentUser = setUser(sessionHolder);
         // set mode to session
         sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
         // set status to session
         sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
+        // call getUserAPI
+        callGetUserAPI(sessionHolder);
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
-                .outputSpeech(text(currentUser.getName() + "殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。"))
+                .outputSpeech(text("殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。"))
                 .shouldEndSession(false)
                 .build();
     }
@@ -68,8 +73,7 @@ public class BunshinSkillHandler {
     CEKResponse handleInvokeModeIntent(SessionHolder sessionHolder,
                                        @SlotValue Optional<String> mode) throws IOException {
 
-        User currentUser = setUser(sessionHolder);
-        callAPISample(sessionHolder);
+        log.info("0000007" + currentUser.getName());
 
         String currentMode = mode.orElse(MODE_DEFAULT);
         // set mode to session
@@ -90,6 +94,7 @@ public class BunshinSkillHandler {
     CEKResponse handleFripPageIntent(SessionHolder sessionHolder,
                                      @SlotValue Optional<String> order) throws IOException {
 
+        log.info("order: " + order.orElse(ORDER_DEFAULT));
         // get mode from session
         String mode = sessionHolder.getSessionAttributes().get(MODE).toString();
         // get status from session
@@ -98,7 +103,7 @@ public class BunshinSkillHandler {
         if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_INPROGRESS)) {
 
             String currentOrder = order.orElse(ORDER_DEFAULT);
-            flipPage(sessionHolder, currentOrder);
+            outputSpeechText = flipPage(sessionHolder, currentOrder);
 
         } else {
             outputSpeechText = ERROR_MESSAGE;
@@ -225,13 +230,6 @@ public class BunshinSkillHandler {
 //                    e.getMessage();
 //                }
 
-                String response = "{\"name\" : \"いわせの書\", \"id\" : \"id\"}";
-                // get book from response
-                Book currentBook = new ObjectMapper().readValue(response, Book.class);
-                // set book to session
-                sessionHolder.getSessionAttributes().put(BOOK, currentBook);
-                // get user from session
-                User currentUser = new ObjectMapper().readValue(sessionHolder.getSessionAttributes().get(USER).toString(), User.class);
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
                 // set mode to status
@@ -250,17 +248,20 @@ public class BunshinSkillHandler {
      */
     private String callbackText(SessionHolder sessionHolder) throws IOException {
 
-        User currentUser = new ObjectMapper().readValue(sessionHolder.getSessionAttributes().get(USER).toString(), User.class);
-        Book currentBook = new ObjectMapper().readValue(sessionHolder.getSessionAttributes().get(BOOK).toString(), Book.class);
+        log.info("currentBook.getTalkList().size(): " + currentBook.getTalkList().size());
+
+        Integer currentPage = currentUser.getCurrentSectionSequence();
+        currentPage++;
+        log.info("currentPage: " + currentPage);
         String result = "";
-        if(currentBook.getTalkList().size() == currentUser.getCurrentSectionSequence() + 1){
+        if(currentBook.getTalkList().size() == currentPage){
             Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
             result =  currentTalk.getText();
+            result += "巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
             // set status to session
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
             // set mode to session
             sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
-            result += "巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
 
         }else if (currentBook.getTalkList().size() > currentUser.getCurrentSectionSequence() && currentUser.getCurrentSectionSequence() >= 0){
             Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
@@ -281,14 +282,11 @@ public class BunshinSkillHandler {
     private String flipPage(SessionHolder sessionHolder, String currentOrder) throws IOException {
 
         String result = "";
-        User currentUser = new ObjectMapper().readValue(sessionHolder.getSessionAttributes().get(USER).toString(), User.class);
-        Integer currentPage = currentUser.getCurrentSectionSequence();
-
-        if (currentOrder.equals("次")) {
-            currentPage++;
+        if (currentOrder.equals("NEXT")) {
+            currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() + 1);
             result = callbackText(sessionHolder);
-        } else if (currentOrder.equals("前")) {
-            currentPage--;
+        } else if (currentOrder.equals("BEFORE")) {
+            currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() - 1);
             result = callbackText(sessionHolder);
         } else {
             result = ERROR_MESSAGE;
@@ -297,16 +295,15 @@ public class BunshinSkillHandler {
     }
 
     /**
-     * 外部API叩き用サンプル Clovaでは現状使用不可
+     * ユーザ取得API呼び出し
      * @param sessionHolder
      * @return
      * @throws IOException
      */
-    private void callAPISample(SessionHolder sessionHolder) throws IOException {
+    private void callGetUserAPI(SessionHolder sessionHolder) throws IOException {
         // user request
-        String url = "https://bm8fzu0fne.execute-api.ap-northeast-1.amazonaws.com/lineboot2018_dev/user?lineuserid=U1137a5bc85ccf0f83d69186e014056bd";
+        String url = "https://bm8fzu0fne.execute-api.ap-northeast-1.amazonaws.com/lineboot2018_dev/user?lineuserid=" + sessionHolder.getSession().getUser().getUserId();
         OkHttpClient client = new OkHttpClient();
-        String result = "";
         Request request = new Request.Builder()
                 .url(url)
                 .build();
@@ -335,29 +332,70 @@ public class BunshinSkillHandler {
                         log.info("0000005" + items);
                         JSONObject item = items.getJSONObject(0);
                         log.info("0000006" + item.getString("name"));
-                        result = item.getString("name");
+                        currentUser = new ObjectMapper().readValue(item.toString(), User.class);;
+                        log.info("0000007" + currentUser.getName());
+                        log.info("0000008" + currentUser.getlineuserid());
+                        callGetBookAPI(currentUser.getlineuserid());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }
                 }
             });
-//            Response response = call.execute();
-
-
 
         } catch (Exception e) {
             log.info(e.getMessage());
         }
     }
 
-    private User setUser(SessionHolder sessionHolder) throws IOException {
-        String response = "{\"name\" : \"いわせ あつや\", \"lineUserID\" : \"id\", \"currentSectionSequence\" : 0}";
-        // get from response
-        User currentUser = new ObjectMapper().readValue(response, User.class);
-        // set user(JSON) to session
-        ObjectMapper mapper = new ObjectMapper();
-        sessionHolder.getSessionAttributes().put(USER, mapper.writeValueAsString(currentUser));
-        return currentUser;
-    }
+    /**
+     * ブック取得API呼び出し
+     * @return
+     * @throws IOException
+     */
+    private void callGetBookAPI(String lineUserId) throws IOException {
+        // user request
+        String url = "https://bm8fzu0fne.execute-api.ap-northeast-1.amazonaws.com/lineboot2018_dev/User?lineuserid=" + lineUserId;
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        Call call = client.newCall(request);
 
+        try {
+            call.enqueue(new Callback() {
+
+                @Override
+                public void onFailure(Call onCall, IOException e) {
+
+                }
+
+                @Override
+                public void onResponse(Call onCall,Response response) throws IOException {
+                    try {
+                        log.info("0000001" + response);
+                        ResponseBody body = response.body();
+                        log.info("0000002" + body);
+                        String result = body.string();
+                        log.info("0000003" + result);
+                        // get from response
+                        JSONObject resdto = new JSONObject(result);
+                        log.info("0000004" + resdto);
+//                        JSONArray items = resdto.getJSONArray("Items");
+//                        log.info("0000005" + items);
+//                        JSONObject item = items.getJSONObject(0);
+//                        log.info("0000006" + item.getString("name"));
+                        log.info("0000007" + currentUser.getlineuserid());
+                        String sample = "{\"name\" : \"いわせの書\", \"id\" : \"sampleId\"}";
+                        // get book from response
+                        currentBook = new ObjectMapper().readValue(sample, Book.class);
+                        log.info("0000018" + currentBook.getName());
+                    } catch (Exception e) {
+                        log.info(e.getMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+    }
 }

@@ -282,10 +282,10 @@ public class BunshinSkillHandler {
     private String flipPage(SessionHolder sessionHolder, String currentOrder) throws IOException {
 
         String result = "";
-        if (currentOrder.equals("NEXT")) {
+        if (currentOrder.equals("次")) {
             currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() + 1);
             result = callbackText(sessionHolder);
-        } else if (currentOrder.equals("BEFORE")) {
+        } else if (currentOrder.equals("前")) {
             currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() - 1);
             result = callbackText(sessionHolder);
         } else {

@@ -184,10 +184,10 @@ public class BunshinSkillHandler {
     }
 
     @IntentMapping("Clova.CancelIntent")
-    CEKResponse handleCancelIntent() {
-
+    CEKResponse handleCancelIntent(SessionHolder sessionHolder) {
+        log.info("分身さんを終了しました．");
         String outputSpeechText = "さらばでござる。";
-
+        sessionHolder.getSessionAttributes().clear();
         return CEKResponse.builder()
                 .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(true)
@@ -197,8 +197,12 @@ public class BunshinSkillHandler {
     @SessionEndedMapping
     CEKResponse handleSessionEnded(SessionHolder sessionHolder) {
         log.info("分身さんを終了しました．");
+        String outputSpeechText = "さらばでござる。";
         sessionHolder.getSessionAttributes().clear();
-        return CEKResponse.empty();
+        return CEKResponse.builder()
+                .outputSpeech(text(outputSpeechText))
+                .shouldEndSession(true)
+                .build();
     }
 
 // ------------- private ----------------
@@ -257,7 +261,9 @@ public class BunshinSkillHandler {
         if(currentBook.getTalkList().size() == currentPage){
             Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
             result =  currentTalk.getText();
-            result += "巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
+            result += " ... 巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
+            // set default to User Sequence
+            currentUser.setCurrentSectionSequence(0);
             // set status to session
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
             // set mode to session

@@ -1,5 +1,6 @@
 package com.example.clova_sample.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.ArrayList;
@@ -8,40 +9,41 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Book {
 
-    String id;
-    String Name;
+    String lineuserid;
+    String bookid;
+    String name;
+    List<Talk> talklist = new ArrayList<Talk>();
 
-    List<Talk> talkList = new ArrayList<Talk>();
-
-    public Book(){
-        Talk talk1 = new Talk();
-        talk1.setText("テキストひとつめ！おぐらさん！");
-        Talk talk2 = new Talk();
-        talk2.setText("テキストふたつめ！おぐらちゃん！");
-        talkList.add(talk1);
-        talkList.add(talk2);
-    }
-    public String getId() {
-        return id;
+    public String getlineuserid() {
+        return lineuserid;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setlineuserid(String lineuserid) {
+        this.lineuserid = lineuserid;
     }
 
-    public String getName() {
-        return Name;
+    public String getbookid() {
+        return bookid;
     }
 
-    public void setName(String name) {
-        Name = name;
+    public void setbookid(String bookid) {
+        this.bookid = bookid;
     }
 
-    public List<Talk> getTalkList() {
-        return talkList;
+    public String getname() {
+        return name;
     }
 
-    public void setTalkList(List<Talk> talkList) {
-        this.talkList = talkList;
+    public void setname(String name) {
+        this.name = name;
     }
+
+    public List<Talk> gettalklist() {
+        return talklist;
+    }
+
+    public void settalklist(List<Talk> talklist) {
+        this.talklist = talklist;
+    }
+
 }

@@ -15,9 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static com.linecorp.clova.extension.boot.message.speech.OutputSpeech.text;
 
@@ -45,8 +43,9 @@ public class BunshinSkillHandler {
     private static final String STATUS_INPROGRESS = "inProgress";
 
     // Variable for API
-    private User currentUser = new User();
-    private Book currentBook = new Book();
+    private Map<String, User> currentUserMap = new HashMap<>();
+    private Map<String, Book> currentBookMap = new HashMap<>();
+    private static final String URLFORAPI = "https://9vh78csui5.execute-api.ap-northeast-1.amazonaws.com/Mock/";
 
     // Error Message
     private static final String ERROR_MESSAGE = "すみません、よく聞き取れないでござる";
@@ -73,7 +72,6 @@ public class BunshinSkillHandler {
     CEKResponse handleInvokeModeIntent(SessionHolder sessionHolder,
                                        @SlotValue Optional<String> mode) throws IOException {
 
-        log.info("0000007" + currentUser.getName());
 
         String currentMode = mode.orElse(MODE_DEFAULT);
         // set mode to session
@@ -198,7 +196,10 @@ public class BunshinSkillHandler {
     CEKResponse handleSessionEnded(SessionHolder sessionHolder) {
         log.info("分身さんを終了しました．");
         String outputSpeechText = "さらばでござる。";
+        User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         sessionHolder.getSessionAttributes().clear();
+        currentUserMap.remove(currentUser.getlineuserid());
+        currentBookMap.remove(currentUser.getlineuserid() + currentUser.getcurrentbookid());
         return CEKResponse.builder()
                 .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(true)
@@ -234,11 +235,13 @@ public class BunshinSkillHandler {
 //                    e.getMessage();
 //                }
 
+                User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
+                Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
                 // set mode to status
                 sessionHolder.getSessionAttributes().put(STATUS, STATUS_START);
-                return "私は" + currentUser.getName() + "でござる。" + currentBook.getName() + "の巻物を読み上げても良いでござるか？";
+                return "私は" + currentUser.getname() + "でござる。" + currentBook.getname() + "の巻物を読み上げても良いでござるか？";
             default:
                 return ERROR_MESSAGE;
         }
@@ -252,26 +255,26 @@ public class BunshinSkillHandler {
      */
     private String callbackText(SessionHolder sessionHolder) throws IOException {
 
-        log.info("currentBook.getTalkList().size(): " + currentBook.getTalkList().size());
-
-        Integer currentPage = currentUser.getCurrentSectionSequence();
+        User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
+        Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
+        Integer currentPage = currentUser.getcurrentsectionsequence();
         currentPage++;
         log.info("currentPage: " + currentPage);
         String result = "";
-        if(currentBook.getTalkList().size() == currentPage){
-            Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
-            result =  currentTalk.getText();
+        if(currentBook.gettalklist().size() == currentPage){
+            Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
+            result =  currentTalk.getS();
             result += " ... 巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
             // set default to User Sequence
-            currentUser.setCurrentSectionSequence(0);
+            currentUser.setcurrentsectionsequence(0);
             // set status to session
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
             // set mode to session
             sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
 
-        }else if (currentBook.getTalkList().size() > currentUser.getCurrentSectionSequence() && currentUser.getCurrentSectionSequence() >= 0){
-            Talk currentTalk = currentBook.getTalkList().get(currentUser.getCurrentSectionSequence());
-            result = currentTalk.getText();
+        }else if (currentBook.gettalklist().size() > currentUser.getcurrentsectionsequence() && currentUser.getcurrentsectionsequence() >= 0){
+            Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
+            result = currentTalk.getS();
         }else{
             result = ERROR_MESSAGE;
         }
@@ -287,12 +290,13 @@ public class BunshinSkillHandler {
      */
     private String flipPage(SessionHolder sessionHolder, String currentOrder) throws IOException {
 
+        User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         String result = "";
         if (currentOrder.equals("次")) {
-            currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() + 1);
+            currentUser.setcurrentsectionsequence(currentUser.getcurrentsectionsequence() + 1);
             result = callbackText(sessionHolder);
         } else if (currentOrder.equals("前")) {
-            currentUser.setCurrentSectionSequence(currentUser.getCurrentSectionSequence() - 1);
+            currentUser.setcurrentsectionsequence(currentUser.getcurrentsectionsequence() - 1);
             result = callbackText(sessionHolder);
         } else {
             result = ERROR_MESSAGE;
@@ -308,7 +312,7 @@ public class BunshinSkillHandler {
      */
     private void callGetUserAPI(SessionHolder sessionHolder) throws IOException {
         // user request
-        String url = "https://bm8fzu0fne.execute-api.ap-northeast-1.amazonaws.com/lineboot2018_dev/user?lineuserid=" + sessionHolder.getSession().getUser().getUserId();
+        String url = URLFORAPI + "users/" + sessionHolder.getSession().getUser().getUserId();
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
@@ -328,6 +332,7 @@ public class BunshinSkillHandler {
                     try {
                         log.info("0000001" + response);
                         ResponseBody body = response.body();
+                        log.info("statuscode : " + response.code());
                         log.info("0000002" + body);
                         String result = body.string();
                         log.info("0000003" + result);
@@ -338,10 +343,11 @@ public class BunshinSkillHandler {
                         log.info("0000005" + items);
                         JSONObject item = items.getJSONObject(0);
                         log.info("0000006" + item.getString("name"));
-                        currentUser = new ObjectMapper().readValue(item.toString(), User.class);;
-                        log.info("0000007" + currentUser.getName());
+                        User currentUser = new ObjectMapper().readValue(item.toString(), User.class);;
+                        log.info("0000007" + currentUser.getname());
                         log.info("0000008" + currentUser.getlineuserid());
-                        callGetBookAPI(currentUser.getlineuserid());
+                        currentUserMap.put(currentUser.getlineuserid(), currentUser);
+                        callGetBookAPI(currentUser.getlineuserid(), currentUser.getcurrentbookid());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }
@@ -358,9 +364,9 @@ public class BunshinSkillHandler {
      * @return
      * @throws IOException
      */
-    private void callGetBookAPI(String lineUserId) throws IOException {
+    private void callGetBookAPI(String lineUserId, String bookId) throws IOException {
         // user request
-        String url = "https://bm8fzu0fne.execute-api.ap-northeast-1.amazonaws.com/lineboot2018_dev/User?lineuserid=" + lineUserId;
+        String url = URLFORAPI + "users/" + lineUserId + "/books/" + bookId;
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
@@ -378,23 +384,36 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
-                        log.info("0000001" + response);
+                        log.info("0000011" + response);
                         ResponseBody body = response.body();
-                        log.info("0000002" + body);
+                        log.info("0000012" + body);
                         String result = body.string();
-                        log.info("0000003" + result);
+                        log.info("0000013" + result);
                         // get from response
                         JSONObject resdto = new JSONObject(result);
-                        log.info("0000004" + resdto);
-//                        JSONArray items = resdto.getJSONArray("Items");
-//                        log.info("0000005" + items);
-//                        JSONObject item = items.getJSONObject(0);
-//                        log.info("0000006" + item.getString("name"));
-                        log.info("0000007" + currentUser.getlineuserid());
-                        String sample = "{\"name\" : \"いわせの書\", \"id\" : \"sampleId\"}";
+                        log.info("0000014" + resdto);
+                        JSONArray items = resdto.getJSONArray("Items");
+                        log.info("0000015" + items);
+                        JSONObject item = items.getJSONObject(0);
                         // get book from response
-                        currentBook = new ObjectMapper().readValue(sample, Book.class);
-                        log.info("0000018" + currentBook.getName());
+                        Book currentBook = new ObjectMapper().readValue(item.toString(), Book.class);
+                        log.info("0000118" + currentBook.getname());
+                        JSONArray talks = item.getJSONArray("talklist");
+                        log.info("0001118" + talks.toString());
+                        log.info("0001118" + talks.length());
+                        currentBook.gettalklist().clear();
+                        for(Integer i = 0; i < talks.length(); i++){
+                            log.info("0001118" + talks.getJSONObject(i).get("S").toString());
+                            Talk t = new Talk();
+                            t.sets(talks.getJSONObject(i).get("S").toString());
+                            currentBook.gettalklist().add(t);
+                        }
+
+                        currentBookMap.put(currentBook.getlineuserid() + currentBook.getbookid(), currentBook);
+                        log.info("0000018" + currentBook.getname());
+                        log.info("0000019" + currentBook.gettalklist().get(0).getS());
+                        log.info("0000019" + currentBook.gettalklist().get(1).getS());
+//                        log.info("0000019" + currentBook.gettalklist().get(3).gets());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }

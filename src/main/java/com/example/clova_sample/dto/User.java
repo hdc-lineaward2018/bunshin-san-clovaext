@@ -6,13 +6,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class User {
     String name;
     String lineuserid;
-    Integer currentSectionSequence = 0;
+    String currentbookid;
+    Integer currentsectionsequence = 0;
 
-    public String getName() {
+    public String getname() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setname(String name) {
         this.name = name;
     }
 
@@ -24,11 +25,20 @@ public class User {
         this.lineuserid = lineUserID;
     }
 
-    public Integer getCurrentSectionSequence() {
-        return currentSectionSequence;
+    public Integer getcurrentsectionsequence() {
+        return currentsectionsequence;
     }
 
-    public void setCurrentSectionSequence(Integer currentSectionSequence) {
-        this.currentSectionSequence = currentSectionSequence;
+    public void setcurrentsectionsequence(Integer currentSectionSequence) {
+        this.currentsectionsequence = currentSectionSequence;
     }
+
+    public String getcurrentbookid() {
+        return currentbookid;
+    }
+
+    public void setcurrentbookid(String currentbookid) {
+        this.currentbookid = currentbookid;
+    }
+
 }

@@ -5,22 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Talk {
 
-    String id;
-    String text;
+    String S;
 
-    public String getId() {
-        return id;
+    public String getS() {
+        return S;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
+    public void sets(String text) {
+        this.S = text;
     }
 }

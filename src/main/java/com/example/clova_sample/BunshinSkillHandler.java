@@ -45,7 +45,7 @@ public class BunshinSkillHandler {
     // Variable for API
     private Map<String, User> currentUserMap = new HashMap<>();
     private Map<String, Book> currentBookMap = new HashMap<>();
-    private static final String URLFORAPI = "https://9vh78csui5.execute-api.ap-northeast-1.amazonaws.com/Mock/";
+    private static final String URLFORAPI = "https://9vh78csui5.execute-api.ap-northeast-1.amazonaws.com/Develop/";
 
     // Error Message
     private static final String ERROR_MESSAGE = "すみません、よく聞き取れないでござる";

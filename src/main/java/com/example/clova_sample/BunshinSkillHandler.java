@@ -244,24 +244,28 @@ public class BunshinSkillHandler {
      */
     private String callbackText(SessionHolder sessionHolder) throws IOException {
 
-        User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
-        Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
-        Integer currentPage = currentUser.getcurrentsectionsequence();
         String result = "";
-        if (currentBook.gettalklist().size() > currentPage && currentPage >= 0){
-            result = currentBook.gettalklist().get(currentPage);
-        } else if (currentBook.gettalklist().size() == currentPage) {
-            result = END_MESSAGE;
-            // set default to User Sequence
-            currentUser.setcurrentsectionsequence(0);
-            // set status to session
-            sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
-            // set mode to session
-            sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
-        } else{
+        try {
+            User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
+            Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
+            Integer currentPage = currentUser.getcurrentsectionsequence();
+            if (currentBook.gettalklist().size() > currentPage && currentPage >= 0){
+                result = currentBook.gettalklist().get(currentPage);
+            } else if (currentBook.gettalklist().size() == currentPage) {
+                result = END_MESSAGE;
+                // set default to User Sequence
+                currentUser.setcurrentsectionsequence(0);
+                // set status to session
+                sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
+                // set mode to session
+                sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
+            } else{
+                result = ERROR_SOUND_MESSAGE;
+            }
+        } catch (Exception e){
+            log.error(e.getMessage());
             result = ERROR_SOUND_MESSAGE;
         }
-
         return result;
     }
 
@@ -367,10 +371,7 @@ public class BunshinSkillHandler {
                         JSONObject item = items.getJSONObject(0);
                         // get book from response
                         Book currentBook = new ObjectMapper().readValue(item.toString(), Book.class);
-
                         currentBookMap.put(currentBook.getlineuserid() + currentBook.getbookid(), currentBook);
-
-
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }

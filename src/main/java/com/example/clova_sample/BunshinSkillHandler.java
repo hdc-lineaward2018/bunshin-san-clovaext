@@ -246,7 +246,9 @@ public class BunshinSkillHandler {
 
         String result = "";
         try {
+            log.info("currentUserMap : " + currentUserMap.toString());
             User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
+            log.info("currentBookMap : " + currentBookMap.toString());
             Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
             Integer currentPage = currentUser.getcurrentsectionsequence();
             if (currentBook.gettalklist().size() > currentPage && currentPage >= 0){
@@ -259,11 +261,11 @@ public class BunshinSkillHandler {
                 sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
-            } else{
+            } else {
                 result = ERROR_SOUND_MESSAGE;
             }
         } catch (Exception e){
-            log.error(e.getMessage());
+            log.info(e.getMessage());
             result = ERROR_SOUND_MESSAGE;
         }
         return result;
@@ -318,6 +320,7 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
+                        log.info("currentUser responsebody : " + response.body().string());
                         ResponseBody body = response.body();
                         String result = body.string();
                         // get from response
@@ -327,6 +330,7 @@ public class BunshinSkillHandler {
                         User currentUser = new ObjectMapper().readValue(item.toString(), User.class);;
                         currentUserMap.put(currentUser.getlineuserid(), currentUser);
                         callGetBookAPI(currentUser.getlineuserid(), currentUser.getcurrentbookid());
+                        log.info("currentUser getName : " + currentUser.getname());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }
@@ -363,6 +367,7 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
+                        log.info("currentBook responsebody : " + response.body().string());
                         ResponseBody body = response.body();
                         String result = body.string();
                         // get from response
@@ -372,6 +377,7 @@ public class BunshinSkillHandler {
                         // get book from response
                         Book currentBook = new ObjectMapper().readValue(item.toString(), Book.class);
                         currentBookMap.put(currentBook.getlineuserid() + currentBook.getbookid(), currentBook);
+                        log.info("currentBook gettalklist : " + currentBook.gettalklist());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }

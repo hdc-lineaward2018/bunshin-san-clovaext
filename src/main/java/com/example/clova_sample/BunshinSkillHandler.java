@@ -302,7 +302,7 @@ public class BunshinSkillHandler {
      */
     private void callGetUserAPI(SessionHolder sessionHolder) throws IOException {
         // user request
-        String url = URLFORAPI + "users/" + sessionHolder.getSession().getUser().getUserId();
+        String url = URLFORAPI + "/users/" + sessionHolder.getSession().getUser().getUserId();
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
@@ -349,7 +349,7 @@ public class BunshinSkillHandler {
      */
     private void callGetBookAPI(String lineUserId, String bookId) throws IOException {
         // user request
-        String url = URLFORAPI + "users/" + lineUserId + "/books/" + bookId;
+        String url = URLFORAPI + "/users/" + lineUserId + "/books/" + bookId;
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)

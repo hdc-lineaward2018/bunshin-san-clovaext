@@ -1,13 +1,10 @@
 package com.example.clova_sample;
 
 import com.example.clova_sample.dto.*;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.clova.extension.boot.handler.annnotation.*;
 import com.linecorp.clova.extension.boot.message.response.CEKResponse;
 import com.linecorp.clova.extension.boot.session.SessionHolder;
-import jdk.nashorn.internal.parser.JSONParser;
 import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -25,9 +22,7 @@ public class BunshinSkillHandler {
     private static final Logger log = LoggerFactory.getLogger(BunshinSkillHandler.class);
 
     // Session Variable
-    private static final String USER = "user";
     private static final String MODE = "mode";
-    private static final String BOOK = "book";
     private static final String STATUS = "status";
 
     // Mode
@@ -47,8 +42,16 @@ public class BunshinSkillHandler {
     private Map<String, Book> currentBookMap = new HashMap<>();
     private static final String URLFORAPI = "https://9vh78csui5.execute-api.ap-northeast-1.amazonaws.com/Mock/";
 
-    // Error Message
-    private static final String ERROR_MESSAGE = "すみません、よく聞き取れないでござる";
+    // Message
+    private static final String LAUNCH_MESSAGE = "殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。";
+    private static final String CANCEL_MESSAGE = "中止でござるか。他に唱えたい術を伝えて欲しいでござる。";
+    private static final String GUIDE_MESSAGE = "術を唱えることで、色々できるでござる。";
+    private static final String INVOKE_MESSAGE = "拙者は{0}の分身でござる。{1}の巻物を読み上げても良いでござるか？";
+    private static final String ERROR_SOUND_MESSAGE = "よく聞き取れないでござる。";
+    private static final String ERROR_USER_MESSAGE = "殿の情報をうまく読み取れなかったでござる。LINEから分身さんを友達登録されていることを確認するでござる。";
+    private static final String ERROR_BOOK_MESSAGE = "巻物の情報をうまく読み取れなかったでござる。LINEから分身さんに巻物が登録されていることを確認するでござる。";
+    private static final String ERROR_MODE_MESSAGE = "の術は覚えていないでござる。";
+    private static final String END_MESSAGE = "。。。 巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる。";
 
     @LaunchMapping
     CEKResponse handleLaunch(SessionHolder sessionHolder) throws IOException {
@@ -63,7 +66,7 @@ public class BunshinSkillHandler {
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
-                .outputSpeech(text("殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。"))
+                .outputSpeech(text(LAUNCH_MESSAGE))
                 .shouldEndSession(false)
                 .build();
     }
@@ -99,12 +102,10 @@ public class BunshinSkillHandler {
         String status = sessionHolder.getSessionAttributes().get(STATUS).toString();
         String outputSpeechText = "";
         if (mode.equals(MODE_BUNSHIN) && status.equals(STATUS_INPROGRESS)) {
-
             String currentOrder = order.orElse(ORDER_DEFAULT);
             outputSpeechText = flipPage(sessionHolder, currentOrder);
-
         } else {
-            outputSpeechText = ERROR_MESSAGE;
+            outputSpeechText = ERROR_SOUND_MESSAGE;
         }
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
@@ -130,7 +131,7 @@ public class BunshinSkillHandler {
             outputSpeechText = callbackText(sessionHolder);
 
         } else {
-            outputSpeechText = ERROR_MESSAGE;
+            outputSpeechText = ERROR_SOUND_MESSAGE;
         }
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
@@ -154,16 +155,16 @@ public class BunshinSkillHandler {
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
             // set mode to session
             sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
-            outputSpeechText = "中止でござるか。他に唱えたい術を伝えて欲しいでござる。";
+            outputSpeechText = CANCEL_MESSAGE;
 
         } else {
-            outputSpeechText = ERROR_MESSAGE;
+            outputSpeechText = ERROR_SOUND_MESSAGE;
         }
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
-                .outputSpeech(text(outputSpeechText)) // 複数行のテキストを連結して発話
+                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(false)
                 .build();
     }
@@ -171,37 +172,34 @@ public class BunshinSkillHandler {
     @IntentMapping("Clova.GuideIntent")
     CEKResponse handleGuideIntent(SessionHolder sessionHolder) {
 
-        String outputSpeechText = "術を唱えることで、色々できるでござる。";
+        String outputSpeechText = GUIDE_MESSAGE;
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
         return CEKResponse.builder()
-                .outputSpeech(text(outputSpeechText)) // 複数行のテキストを連結して発話
+                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(false)
                 .build();
     }
 
     @IntentMapping("Clova.CancelIntent")
     CEKResponse handleCancelIntent(SessionHolder sessionHolder) {
-        log.info("分身さんを終了しました．");
-        String outputSpeechText = "さらばでござる。";
+        User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         sessionHolder.getSessionAttributes().clear();
+        currentUserMap.remove(currentUser.getlineuserid());
+        currentBookMap.remove(currentUser.getlineuserid() + currentUser.getcurrentbookid());
         return CEKResponse.builder()
-                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(true)
                 .build();
     }
 
     @SessionEndedMapping
     CEKResponse handleSessionEnded(SessionHolder sessionHolder) {
-        log.info("分身さんを終了しました．");
-        String outputSpeechText = "さらばでござる。";
         User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         sessionHolder.getSessionAttributes().clear();
         currentUserMap.remove(currentUser.getlineuserid());
         currentBookMap.remove(currentUser.getlineuserid() + currentUser.getcurrentbookid());
         return CEKResponse.builder()
-                .outputSpeech(text(outputSpeechText))
                 .shouldEndSession(true)
                 .build();
     }
@@ -218,32 +216,24 @@ public class BunshinSkillHandler {
     private String callbackMode(String mode, SessionHolder sessionHolder) throws IOException {
         switch (mode) {
             case "分身":
-
-//                //Book取得リクエスト
-//                String url = "https://api.line.me/v2/profile";
-//                OkHttpClient client = new OkHttpClient();
-//                Request request = new Request.Builder()
-//                        .url(url)
-//                        .build();
-//                Call call = client.newCall(request);
-//                try {
-//                    Response response = call.execute();
-//                    ResponseBody body = response.body();
-//                    String result = body.string();
-//                    log.info(result);
-//                } catch (IOException e) {
-//                    e.getMessage();
-//                }
-
                 User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
                 Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
+                if(currentUser.getname() == null) {
+                    return ERROR_USER_MESSAGE;
+                }
+                if(currentBook.gettalklist().get(0) == null) {
+                    return ERROR_BOOK_MESSAGE;
+                }
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_BUNSHIN);
                 // set mode to status
                 sessionHolder.getSessionAttributes().put(STATUS, STATUS_START);
-                return "私は" + currentUser.getname() + "でござる。" + currentBook.getname() + "の巻物を読み上げても良いでござるか？";
+                String result = INVOKE_MESSAGE;
+                result.replace("{0}",currentUser.getname()).replace("{1}",currentBook.getname());
+
+                return result;
             default:
-                return ERROR_MESSAGE;
+                return mode + ERROR_MODE_MESSAGE;
         }
     }
 
@@ -264,7 +254,7 @@ public class BunshinSkillHandler {
         if(currentBook.gettalklist().size() == currentPage){
             Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
             result =  currentTalk.getS();
-            result += " ... 巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる";
+            result += END_MESSAGE;
             // set default to User Sequence
             currentUser.setcurrentsectionsequence(0);
             // set status to session
@@ -276,7 +266,7 @@ public class BunshinSkillHandler {
             Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
             result = currentTalk.getS();
         }else{
-            result = ERROR_MESSAGE;
+            result = ERROR_SOUND_MESSAGE;
         }
 
         return result;
@@ -299,7 +289,7 @@ public class BunshinSkillHandler {
             currentUser.setcurrentsectionsequence(currentUser.getcurrentsectionsequence() - 1);
             result = callbackText(sessionHolder);
         } else {
-            result = ERROR_MESSAGE;
+            result = ERROR_SOUND_MESSAGE;
         }
         return result;
     }
@@ -397,10 +387,10 @@ public class BunshinSkillHandler {
                         JSONObject item = items.getJSONObject(0);
                         // get book from response
                         Book currentBook = new ObjectMapper().readValue(item.toString(), Book.class);
-                        log.info("0000118" + currentBook.getname());
+                        log.info("0000016" + currentBook.getname());
                         JSONArray talks = item.getJSONArray("talklist");
-                        log.info("0001118" + talks.toString());
-                        log.info("0001118" + talks.length());
+                        log.info("0000017" + talks.toString());
+                        log.info("0000018" + talks.length());
                         currentBook.gettalklist().clear();
                         for(Integer i = 0; i < talks.length(); i++){
                             log.info("0001118" + talks.getJSONObject(i).get("S").toString());
@@ -410,10 +400,9 @@ public class BunshinSkillHandler {
                         }
 
                         currentBookMap.put(currentBook.getlineuserid() + currentBook.getbookid(), currentBook);
-                        log.info("0000018" + currentBook.getname());
-                        log.info("0000019" + currentBook.gettalklist().get(0).getS());
-                        log.info("0000019" + currentBook.gettalklist().get(1).getS());
-//                        log.info("0000019" + currentBook.gettalklist().get(3).gets());
+                        log.info("0000019" + currentBook.getname());
+                        log.info("0000020" + currentBook.gettalklist().get(0).getS());
+                        log.info("0000021" + currentBook.gettalklist().get(1).getS());
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }

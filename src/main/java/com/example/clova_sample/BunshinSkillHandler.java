@@ -251,6 +251,8 @@ public class BunshinSkillHandler {
             log.info("currentBookMap : " + currentBookMap.toString());
             Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
             Integer currentPage = currentUser.getcurrentsectionsequence();
+            log.info("currentPage : " + currentPage);
+            log.info("currentBook.gettalklist().size() : " + currentBook.gettalklist().size());
             if (currentBook.gettalklist().size() > currentPage && currentPage >= 0){
                 result = currentBook.gettalklist().get(currentPage);
             } else if (currentBook.gettalklist().size() == currentPage) {

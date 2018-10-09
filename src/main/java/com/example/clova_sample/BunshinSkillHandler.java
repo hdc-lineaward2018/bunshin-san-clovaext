@@ -40,13 +40,13 @@ public class BunshinSkillHandler {
     // Variable for API
     private Map<String, User> currentUserMap = new HashMap<>();
     private Map<String, Book> currentBookMap = new HashMap<>();
-    private static final String URLFORAPI = "https://9vh78csui5.execute-api.ap-northeast-1.amazonaws.com/Develop/";
+    private static final String URLFORAPI = System.getenv("DB_URL");
 
     // Message
     private static final String LAUNCH_MESSAGE = "殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。";
     private static final String CANCEL_MESSAGE = "中止でござるか。他に唱えたい術を伝えて欲しいでござる。";
     private static final String GUIDE_MESSAGE = "術を唱えることで、色々できるでござる。";
-    private static final String INVOKE_MESSAGE = "拙者は{0}の分身でござる。{1}の巻物を読み上げても良いでござるか？";
+    private static final String INVOKE_MESSAGE = "拙者は{0}の分身でござる。巻物を読み上げても良いでござるか？";
     private static final String ERROR_SOUND_MESSAGE = "よく聞き取れないでござる。";
     private static final String ERROR_USER_MESSAGE = "殿の情報をうまく読み取れなかったでござる。LINEから分身さんを友達登録されていることを確認するでござる。";
     private static final String ERROR_BOOK_MESSAGE = "巻物の情報をうまく読み取れなかったでござる。LINEから分身さんに巻物が登録されていることを確認するでござる。";
@@ -77,9 +77,6 @@ public class BunshinSkillHandler {
 
 
         String currentMode = mode.orElse(MODE_DEFAULT);
-        // set mode to session
-        sessionHolder.getSessionAttributes().put(MODE, currentMode);
-
         // invoke callbackMode
         String outputSpeechText = callbackMode(currentMode, sessionHolder);
 
@@ -221,7 +218,7 @@ public class BunshinSkillHandler {
                 if(currentUser.getname() == null) {
                     return ERROR_USER_MESSAGE;
                 }
-                if(currentBook.gettalklist().get(0) == null) {
+                if(currentBook.gettalklist().size() == 0) {
                     return ERROR_BOOK_MESSAGE;
                 }
                 // set mode to session
@@ -229,9 +226,11 @@ public class BunshinSkillHandler {
                 // set mode to status
                 sessionHolder.getSessionAttributes().put(STATUS, STATUS_START);
                 String result = INVOKE_MESSAGE;
-                result.replace("{0}",currentUser.getname()).replace("{1}",currentBook.getname());
+                result = result.replace("{0}",currentUser.getname());
 
                 return result;
+            case "defaultMode":
+                return ERROR_SOUND_MESSAGE;
             default:
                 return mode + ERROR_MODE_MESSAGE;
         }
@@ -248,24 +247,18 @@ public class BunshinSkillHandler {
         User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
         Integer currentPage = currentUser.getcurrentsectionsequence();
-        currentPage++;
-        log.info("currentPage: " + currentPage);
         String result = "";
-        if(currentBook.gettalklist().size() == currentPage){
-            Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
-            result =  currentTalk.getS();
-            result += END_MESSAGE;
+        if (currentBook.gettalklist().size() > currentPage && currentPage >= 0){
+            result = currentBook.gettalklist().get(currentPage);
+        } else if (currentBook.gettalklist().size() == currentPage) {
+            result = END_MESSAGE;
             // set default to User Sequence
             currentUser.setcurrentsectionsequence(0);
             // set status to session
             sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
             // set mode to session
             sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
-
-        }else if (currentBook.gettalklist().size() > currentUser.getcurrentsectionsequence() && currentUser.getcurrentsectionsequence() >= 0){
-            Talk currentTalk = currentBook.gettalklist().get(currentUser.getcurrentsectionsequence());
-            result = currentTalk.getS();
-        }else{
+        } else{
             result = ERROR_SOUND_MESSAGE;
         }
 
@@ -282,11 +275,12 @@ public class BunshinSkillHandler {
 
         User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
         String result = "";
+        Integer currentPage = currentUser.getcurrentsectionsequence();
         if (currentOrder.equals("次")) {
-            currentUser.setcurrentsectionsequence(currentUser.getcurrentsectionsequence() + 1);
+            currentUser.setcurrentsectionsequence(currentPage + 1);
             result = callbackText(sessionHolder);
-        } else if (currentOrder.equals("前")) {
-            currentUser.setcurrentsectionsequence(currentUser.getcurrentsectionsequence() - 1);
+        } else if (currentOrder.equals("前") && currentPage != 0) {
+            currentUser.setcurrentsectionsequence(currentPage - 1);
             result = callbackText(sessionHolder);
         } else {
             result = ERROR_SOUND_MESSAGE;
@@ -320,22 +314,13 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
-                        log.info("0000001" + response);
                         ResponseBody body = response.body();
-                        log.info("statuscode : " + response.code());
-                        log.info("0000002" + body);
                         String result = body.string();
-                        log.info("0000003" + result);
                         // get from response
                         JSONObject resdto = new JSONObject(result);
-                        log.info("0000004" + resdto);
                         JSONArray items = resdto.getJSONArray("Items");
-                        log.info("0000005" + items);
                         JSONObject item = items.getJSONObject(0);
-                        log.info("0000006" + item.getString("name"));
                         User currentUser = new ObjectMapper().readValue(item.toString(), User.class);;
-                        log.info("0000007" + currentUser.getname());
-                        log.info("0000008" + currentUser.getlineuserid());
                         currentUserMap.put(currentUser.getlineuserid(), currentUser);
                         callGetBookAPI(currentUser.getlineuserid(), currentUser.getcurrentbookid());
                     } catch (Exception e) {
@@ -374,35 +359,18 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
-                        log.info("0000011" + response);
                         ResponseBody body = response.body();
-                        log.info("0000012" + body);
                         String result = body.string();
-                        log.info("0000013" + result);
                         // get from response
                         JSONObject resdto = new JSONObject(result);
-                        log.info("0000014" + resdto);
                         JSONArray items = resdto.getJSONArray("Items");
-                        log.info("0000015" + items);
                         JSONObject item = items.getJSONObject(0);
                         // get book from response
                         Book currentBook = new ObjectMapper().readValue(item.toString(), Book.class);
-                        log.info("0000016" + currentBook.getname());
-                        JSONArray talks = item.getJSONArray("talklist");
-                        log.info("0000017" + talks.toString());
-                        log.info("0000018" + talks.length());
-                        currentBook.gettalklist().clear();
-                        for(Integer i = 0; i < talks.length(); i++){
-                            log.info("0001118" + talks.getJSONObject(i).get("S").toString());
-                            Talk t = new Talk();
-                            t.sets(talks.getJSONObject(i).get("S").toString());
-                            currentBook.gettalklist().add(t);
-                        }
 
                         currentBookMap.put(currentBook.getlineuserid() + currentBook.getbookid(), currentBook);
-                        log.info("0000019" + currentBook.getname());
-                        log.info("0000020" + currentBook.gettalklist().get(0).getS());
-                        log.info("0000021" + currentBook.gettalklist().get(1).getS());
+
+
                     } catch (Exception e) {
                         log.info(e.getMessage());
                     }

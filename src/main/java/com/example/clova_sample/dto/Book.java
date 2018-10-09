@@ -12,7 +12,7 @@ public class Book {
     String lineuserid;
     String bookid;
     String name;
-    List<Talk> talklist = new ArrayList<Talk>();
+    List<String> talklist = new ArrayList<>();
 
     public String getlineuserid() {
         return lineuserid;
@@ -38,11 +38,11 @@ public class Book {
         this.name = name;
     }
 
-    public List<Talk> gettalklist() {
+    public List<String> gettalklist() {
         return talklist;
     }
 
-    public void settalklist(List<Talk> talklist) {
+    public void settalklist(List<String> talklist) {
         this.talklist = talklist;
     }
 

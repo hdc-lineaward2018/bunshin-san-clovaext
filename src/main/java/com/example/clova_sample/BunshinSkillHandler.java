@@ -320,7 +320,6 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
-                        log.info("currentUser responsebody : " + response.body().string());
                         ResponseBody body = response.body();
                         String result = body.string();
                         // get from response
@@ -367,7 +366,6 @@ public class BunshinSkillHandler {
                 @Override
                 public void onResponse(Call onCall,Response response) throws IOException {
                     try {
-                        log.info("currentBook responsebody : " + response.body().string());
                         ResponseBody body = response.body();
                         String result = body.string();
                         // get from response

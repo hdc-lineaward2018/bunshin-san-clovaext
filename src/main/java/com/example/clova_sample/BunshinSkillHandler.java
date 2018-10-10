@@ -45,11 +45,11 @@ public class BunshinSkillHandler {
     // Message
     private static final String LAUNCH_MESSAGE = "殿、お待ちしておりました。唱えたい術を伝えて欲しいでござる。";
     private static final String CANCEL_MESSAGE = "中止でござるか。他に唱えたい術を伝えて欲しいでござる。";
-    private static final String GUIDE_MESSAGE = "術を唱えることで、色々できるでござる。";
+    private static final String GUIDE_MESSAGE = "分身の術と唱えることで、LINEからお助け忍者に登録した巻物を読み上げるでござる。";
     private static final String INVOKE_MESSAGE = "拙者は{0}の分身でござる。巻物を読み上げても良いでござるか？";
     private static final String ERROR_SOUND_MESSAGE = "よく聞き取れないでござる。";
-    private static final String ERROR_USER_MESSAGE = "殿の情報をうまく読み取れなかったでござる。LINEから分身さんを友達登録されていることを確認するでござる。";
-    private static final String ERROR_BOOK_MESSAGE = "巻物の情報をうまく読み取れなかったでござる。LINEから分身さんに巻物が登録されていることを確認するでござる。";
+    private static final String ERROR_USER_MESSAGE = "殿の情報をうまく読み取れなかったでござる。LINEからお助け忍者を友だち追加されていることを確認するでござる。";
+    private static final String ERROR_BOOK_MESSAGE = "巻物の情報をうまく読み取れなかったでござる。LINEからお助け忍者に巻物が登録されていることを確認するでござる。";
     private static final String ERROR_MODE_MESSAGE = "の術は覚えていないでござる。";
     private static final String END_MESSAGE = "。。。 巻物を読み終わったでござる。他に唱えたい術を伝えて欲しいでござる。";
 
@@ -213,10 +213,17 @@ public class BunshinSkillHandler {
     private String callbackMode(String mode, SessionHolder sessionHolder) throws IOException {
         switch (mode) {
             case "分身":
-                User currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
-                Book currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
-                if(currentUser.getname() == null) {
+                User currentUser = new User();
+                if(currentUserMap.containsKey(sessionHolder.getSession().getUser().getUserId())) {
+                    currentUser = currentUserMap.get(sessionHolder.getSession().getUser().getUserId());
+                }else{
                     return ERROR_USER_MESSAGE;
+                }
+                Book currentBook = new Book();
+                if(currentBookMap.containsKey(currentUser.getlineuserid() + currentUser.getcurrentbookid())) {
+                    currentBook = currentBookMap.get(currentUser.getlineuserid() + currentUser.getcurrentbookid());
+                }else{
+                    return ERROR_BOOK_MESSAGE;
                 }
                 if(currentBook.gettalklist().size() == 0) {
                     return ERROR_BOOK_MESSAGE;

@@ -62,6 +62,8 @@ public class BunshinSkillHandler {
         sessionHolder.getSessionAttributes().put(STATUS, STATUS_STOP);
         // call getUserAPI
         callGetUserAPI(sessionHolder);
+        // clear session user
+        currentUserMap.remove(sessionHolder.getSession().getUser().getUserId());
 
         log.info("SessionAttribute:" + sessionHolder.getSessionAttributes());
 
@@ -271,10 +273,11 @@ public class BunshinSkillHandler {
                 // set mode to session
                 sessionHolder.getSessionAttributes().put(MODE, MODE_DEFAULT);
             } else {
+                log.error("callbackTextError");
                 result = ERROR_SOUND_MESSAGE;
             }
         } catch (Exception e){
-            log.info(e.getMessage());
+            log.error(e.getMessage());
             result = ERROR_SOUND_MESSAGE;
         }
         return result;
@@ -298,6 +301,7 @@ public class BunshinSkillHandler {
             currentUser.setcurrentsectionsequence(currentPage - 1);
             result = callbackText(sessionHolder);
         } else {
+            log.error("flipPageError");
             result = ERROR_SOUND_MESSAGE;
         }
         return result;
